@@ -166,6 +166,8 @@ def main():
     keypad.init(key_pressed)
     keypad_thread = Thread(target=keypad.get_key)
     keypad_thread.start()
+    global failed_attempt
+    failed_attempt = 0
 
     lcd = LCD.lcd()
     lcd.lcd_clear()
@@ -194,17 +196,28 @@ def main():
                 passcode = enter_passcode()
 
                 if passcode == CORRECT_PASSCODE:
+                    failed_attempt = 0  # ✅ Reset failed attempts on success
                     lcd.lcd_clear()
                     lcd.lcd_display_string("Access Granted", 1)
                     time.sleep(2)
                     send_telegram_message("Access Granted")
                     unlocking_process()
                 else:
+                    failed_attempt += 1  # ✅ Increment failed attempts
                     lcd.lcd_clear()
                     lcd.lcd_display_string("Access Denied", 1)
                     send_telegram_message("Access Denied")
                     buzzer.beep(0.5, 0.5, 2)
                     time.sleep(2)
+
+                    # ✅ If failed attempts reach 5, send alert and reset counter
+                    if failed_attempt >= 5:
+                        lcd.lcd_clear()
+                        lcd.lcd_display_string("Too Many Attempts!", 1)
+                        send_telegram_message("WARNING: Too many failed login attempts!")
+                        time.sleep(3)
+                        failed_attempt = 0  # ✅ Reset failed attempts
+
 
             # QR Code Login Feature
             elif key == 2:
@@ -222,6 +235,7 @@ def main():
                 else:
                     lcd.lcd_clear()
                     lcd.lcd_display_string("QR Code Invalid", 1)
+                    failed_attempt += 1
                     buzzer.beep(0.5, 0.5, 2)
                     time.sleep(2)
 

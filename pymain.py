@@ -90,7 +90,7 @@ def key_pressed(key):
 
     # Admin-specific functionality can be added here
     lcd.lcd_clear()
-    lcd.lcd_display_string("Admin Logged In", 1)
+    lcd.lcd_display_string("Admin Logged In", 1)d
     lcd.lcd_display_string("Press # to log out", 2)
 
 # Function to send Telegram message
@@ -101,36 +101,6 @@ def send_telegram_message(message):
     except Exception as e:
         print(f"Error sending Telegram message: {e}")
 
-
-def adc_to_servo_angle(adc_value):
-    # Assuming adc_value ranges from 0 to 1023
-    angle = (adc_value * 180) / 1023
-    return angle
-
-def handle_sensors():
-    """Monitor sensors and trigger alerts if necessary."""
-    global message_sent
-
-    IR.init()
-    usonic.init()
-    distance = usonic.get_distance()
-
-    if distance < 15 and IR.get_ir_sensor_state():
-        print("Intrusion detected!")
-        if not message_sent:
-            if not admin_logged_in:
-                send_telegram_message("Alert: Someone is holding the door!")
-                camera.take_videos()
-                camera.send_latest_video()
-                message_sent = True
-    else:
-        message_sent = False
-
-def operate_servo():
-    """Control servo motor based on ADC input."""
-    adc_value = adc.get_adc_value(1)
-    angle = adc_to_servo_angle(adc_value)
-    servo.set_servo_position(angle)
 
 def authentication():
 
@@ -151,12 +121,7 @@ def authentication():
 
     while True:
         if admin_logged_in:
-            operate_servo()
-        else:
-            # Check ADC value to determine if the door is unlocked
-            adc_value = adc.get_adc_value(1)
-            if adc_value < 1000:  # If the angle is below 10 degrees
-                send_telegram_message("Warning: Admin forgot to lock the door!")
         
+            # Check ADC value to determine if the door is unlocked
         sleep(1)
 
