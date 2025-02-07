@@ -1,6 +1,6 @@
 import time
 import RPi.GPIO as GPIO
-from picamera2 import Picamera2
+from picamera2 import Picamera2 as picam2
 from pyzbar.pyzbar import decode
 import cv2
 import numpy as np
@@ -11,10 +11,10 @@ import mariadb
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-# Initialize the PiCamera2
+'''# Initialize the PiCamera2
 picam2 = Picamera2()
 video_config = picam2.create_video_configuration(main={"size": (640, 480)})
-picam2.configure(video_config)
+picam2.configure(video_config)'''
 
 # Connect to MariaDB
 conn = mariadb.connect(

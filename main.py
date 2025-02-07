@@ -1,7 +1,9 @@
 import time
 from threading import Thread
 import queue
-import app  # Import the Flask app module
+import pymain
+import app
+import qrcode_scanner as qr  # Import the Flask app module
 
 from hal import hal_led as led
 from hal import hal_lcd as LCD
@@ -16,10 +18,9 @@ from hal import hal_servo as servo
 from hal import hal_temp_humidity_sensor as temp_humid_sensor
 from hal import hal_usonic as usonic
 from hal import hal_dc_motor as dc_motor
+from picamera2 import Picamera2
 #   from hal import hal_accelerometer as accel
-
-from qrcode_scanner import scan_qr 
-
+#from qrcode_scanner import scan_qr 
 #Empty list to store sequence of keypad presses
 shared_keypad_queue = queue.Queue()
 
@@ -34,6 +35,13 @@ def run_flask_app():
 flask_thread = Thread(target=run_flask_app)
 flask_thread.daemon = True
 flask_thread.start()
+
+# Initialize the PiCamera2
+picam2 = Picamera2()
+video_config = picam2.create_video_configuration(main={"size": (640, 480)})
+picam2.configure(video_config)
+
+
 
 #Call back function invoked when any key on keypad is pressed
 def key_pressed(key):
@@ -164,7 +172,7 @@ def main():
                     lcd.lcd_clear()
                     lcd.lcd_display_string("Invalid Card", 1)
                     time.sleep(2)'''
-
+                pymain.authentication()
             elif key == 2:
                 # Handle QR Code (REQ-12)
                 lcd.lcd_clear()
@@ -172,7 +180,7 @@ def main():
                 time.sleep(2)
 
                 # Run the QR scanning process
-                key_validation = scan_qr()
+                key_validation = qr.scan_qr()
 
                 if key_validation:
                     lcd.lcd_clear()
