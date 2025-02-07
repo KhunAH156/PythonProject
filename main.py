@@ -1,9 +1,7 @@
 import time
 from threading import Thread
 import queue
-import pymain
-import app
-import qrcode_scanner as qr  # Import the Flask app module
+import app  # Import the Flask app module
 
 from hal import hal_led as led
 from hal import hal_lcd as LCD
@@ -18,15 +16,27 @@ from hal import hal_servo as servo
 from hal import hal_temp_humidity_sensor as temp_humid_sensor
 from hal import hal_usonic as usonic
 from hal import hal_dc_motor as dc_motor
-from picamera2 import Picamera2
-#   from hal import hal_accelerometer as accel
-#from qrcode_scanner import scan_qr 
-#Empty list to store sequence of keypad presses
-shared_keypad_queue = queue.Queue()
+from telegram import Bot
+from qrcode_scanner import scan_qr
 
+
+
+BOT_TOKEN = "7723998968:AAFc4QK-qRaIxCfqeqLYRs1OLuF-2z_OOiM"
+CHAT_ID = "5819192033"
+
+# Initialize Telegram Bot
+bot = Bot(token=BOT_TOKEN)
+
+message_sent = False
+
+# Empty queue to store keypad input
+shared_keypad_queue = queue.Queue()
 
 # Authorized RFID tag
 AUTHORIZED_RFID_TAG = 701707449650  # Set the correct RFID card
+
+# Correct 4-digit passcode
+CORRECT_PASSCODE = "1234"
 
 def run_flask_app():
     app.app.run(host="0.0.0.0", port=5000, use_reloader=False)
@@ -36,29 +46,53 @@ flask_thread = Thread(target=run_flask_app)
 flask_thread.daemon = True
 flask_thread.start()
 
-# Initialize the PiCamera2
-picam2 = Picamera2()
-video_config = picam2.create_video_configuration(main={"size": (640, 480)})
-picam2.configure(video_config)
-
-
-
-#Call back function invoked when any key on keypad is pressed
+# Call back function invoked when any key on keypad is pressed
 def key_pressed(key):
     shared_keypad_queue.put(key)
 
-#detecting user with ultrasonic
+# Function to send Telegram message
+def send_telegram_message(message):
+    try:
+        bot.send_message(chat_id=CHAT_ID, text=message)
+        print(f"Telegram message sent: {message}")
+    except Exception as e:
+        print(f"Error sending Telegram message: {e}")
+
+# Detect user with ultrasonic sensor
 def detect_user():
     """Detect user presence using the ultrasonic sensor."""
     while True:
-        distance = usonic.get_distance()  # Get the distance from the ultrasonic sensor
-        if distance > 0 and distance < 50:  # Check if the user is within 50 cm
-            return True  # User detected
-        time.sleep(0.5)  # Check every 0.5 seconds
+        distance = usonic.get_distance()
+        if 0 < distance < 50:
+            return True
+        time.sleep(0.5)
 
 def wait_for_key():
     """Wait for a key press and return the key value."""
-    return shared_keypad_queue.get()  # Block until a key is pressed
+    return shared_keypad_queue.get()
+
+def enter_passcode():
+    """Handles masked passcode input from keypad"""
+    lcd = LCD.lcd()
+    lcd.lcd_clear()
+    lcd.lcd_display_string("Enter Passcode:", 1)
+    
+    entered_code = ""
+    
+    while len(entered_code) < 4:
+        key = None
+        while key is None:
+            key = wait_for_key()  # Wait for user input
+
+        if key in range(10):  # If key is 0-9
+            entered_code += str(key)
+            masked_display = "*" * len(entered_code)  # Mask input
+            lcd.lcd_display_string(masked_display, 2)
+        
+        elif key == "#":  # Enter key (optional)
+            break
+
+    return entered_code
 
 def handle_rfid_authorization(reader):
     """Handle payment authorization using an RFID card."""
@@ -67,7 +101,7 @@ def handle_rfid_authorization(reader):
     lcd.lcd_display_string("Tap your card", 1)
 
     while True:
-        rfid_id = reader.read_id_no_block()  # Get the RFID card ID
+        rfid_id = reader.read_id_no_block()
         if rfid_id:
             lcd.lcd_clear()
             if rfid_id == AUTHORIZED_RFID_TAG:
@@ -79,7 +113,6 @@ def handle_rfid_authorization(reader):
                 buzzer.beep(0.5, 0.5, 2)
                 time.sleep(2)
                 lcd.lcd_clear()
-                
 
 def unlocking_process():
     """Handle the door unlocking."""
@@ -89,37 +122,38 @@ def unlocking_process():
     lcd.lcd_display_string("to open door", 2)
 
     while True: 
-        pot_value = adc.get_adc_value(1)  # Read potentiometer value
-        if int(pot_value) >= 900:  # Door fully open (based on potentiometer value)
-            servo.set_servo_position(90)  # Open the compartment
+        pot_value = adc.get_adc_value(1)
+        if int(pot_value) >= 900:
+            servo.set_servo_position(90)
             lcd.lcd_clear()
             lcd.lcd_display_string("Door Opened", 1)
+            send_telegram_message("The door is opened")
+            print("telegram")
             time.sleep(1)
             break
 
-    # Monitor IR sensor for hand removal and door close
     while True:
-        ir_state = ir_sensor.get_ir_sensor_state()  # Detect hand presence
-        if ir_state:  # If hand detected in the dispensing area
+        ir_state = ir_sensor.get_ir_sensor_state()
+        if ir_state:
             lcd.lcd_clear()
             lcd.lcd_display_string("Remove hand", 1)
             buzzer.beep(0.5, 0.5, 2)
             time.sleep(2)
         else:
-            pot_value = adc.get_adc_value(1)  # Read potentiometer value
-        if int(pot_value) <= 200:  # Door Closed
-            servo.set_servo_position(0)  #Closed
+            pot_value = adc.get_adc_value(1)
+        if int(pot_value) <= 200:
+            servo.set_servo_position(0)
             lcd.lcd_clear()
             lcd.lcd_display_string("Thank You!", 1)
+            send_telegram_message("The door is closed")
             time.sleep(1)
             break
 
 def main():
-    #initialization of HAL modules
+    # Initialization of HAL modules
     led.init()
     adc.init()
     buzzer.init()
-  
     moisture_sensor.init()
     input_switch.init()
     ir_sensor.init()
@@ -128,7 +162,6 @@ def main():
     temp_humid_sensor.init()
     usonic.init()
     dc_motor.init()
-    #accelerometer = accel.init()
 
     keypad.init(key_pressed)
     keypad_thread = Thread(target=keypad.get_key)
@@ -138,12 +171,8 @@ def main():
     lcd.lcd_clear()
 
     while True:
-        # Detect user presence (REQ-1)
         user_present = detect_user()
         if user_present:
-            # Log stock information for the owner
-
-            # Display welcome message and main menu 
             lcd.lcd_clear()
             lcd.lcd_display_string("Hello", 1)
             time.sleep(2)
@@ -153,56 +182,56 @@ def main():
             lcd.lcd_clear()
             lcd.lcd_display_string("1. Passcode", 1)
             lcd.lcd_display_string("2. QR Code", 2)
-            time.sleep(2)  # Show the menu for a while before resetting
 
-            # Wait for keypress
             key = wait_for_key()
 
-            #buying physically
-            if key == 1: 
+            # Passcode Login Feature
+            if key == 1:
                 lcd.lcd_clear()
-                lcd.lcd_display_string("Feature", 1)
-                lcd.lcd_display_string("Unavailable", 2)
-                '''
-                # Handle RFID authorization
-                if handle_rfid_authorization(reader):
-                    # Unlock Door
-                    unlocking_process()  # Call the dispensing process
+                lcd.lcd_display_string("Passcode Login", 1)
+                time.sleep(2)
+
+                passcode = enter_passcode()
+
+                if passcode == CORRECT_PASSCODE:
+                    lcd.lcd_clear()
+                    lcd.lcd_display_string("Access Granted", 1)
+                    time.sleep(2)
+                    send_telegram_message("Access Granted")
+                    unlocking_process()
                 else:
                     lcd.lcd_clear()
-                    lcd.lcd_display_string("Invalid Card", 1)
-                    time.sleep(2)'''
-                pymain.authentication()
+                    lcd.lcd_display_string("Access Denied", 1)
+                    send_telegram_message("Access Denied")
+                    buzzer.beep(0.5, 0.5, 2)
+                    time.sleep(2)
+
+            # QR Code Login Feature
             elif key == 2:
-                # Handle QR Code (REQ-12)
                 lcd.lcd_clear()
                 lcd.lcd_display_string("Scanning QR Code", 1)
                 time.sleep(2)
 
-                # Run the QR scanning process
-                key_validation = qr.scan_qr()
+                key_validation = scan_qr()
 
                 if key_validation:
                     lcd.lcd_clear()
                     lcd.lcd_display_string(f"Access Granted", 1)
-                    time.sleep(2) 
-                    unlocking_process()  # Call the dispensing process
-                    key_validation = None
-                    
+                    time.sleep(2)
+                    unlocking_process()
                 else:
                     lcd.lcd_clear()
                     lcd.lcd_display_string("QR Code Invalid", 1)
-                    buzzer.beep(0.5, 0.5, 2)  # Buzzer for invalid input
+                    buzzer.beep(0.5, 0.5, 2)
                     time.sleep(2)
-                    key_validation = None
 
             else:
                 lcd.lcd_clear()
                 lcd.lcd_display_string("Invalid Option", 1)
-                buzzer.beep(0.2, 0.2, 3)  # Buzzer for invalid input
+                buzzer.beep(0.2, 0.2, 3)
                 time.sleep(2)
 
-        lcd.lcd_clear()    
+        lcd.lcd_clear()
 
 if __name__ == '__main__':
     main()

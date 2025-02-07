@@ -10,7 +10,6 @@ from google.oauth2 import service_account
 import subprocess
 
 # Initialize the camera
-picam2 = Picamera2()
 latest_video_path = None
 BOT_TOKEN = "7723998968:AAFc4QK-qRaIxCfqeqLYRs1OLuF-2z_OOiM"
 CHAT_ID = "5819192033"
@@ -18,6 +17,17 @@ bot = Bot(token=BOT_TOKEN)
 
 SERVICE_ACCOUNT_FILE = "/home/pi/wanyay/src/service_account.json"  # Place this in your Docker container
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+
+class Camera:
+    _instance = None
+
+    @staticmethod
+    def get_instance():
+        if Camera._instance is None:
+            Camera._instance = Picamera2()
+        return Camera._instance
+
+picam2 = Camera.get_instance()  # Ensure only one instance is created
 
 def authenticate_drive():
     creds = service_account.Credentials.from_service_account_file(

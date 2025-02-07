@@ -1,20 +1,17 @@
 import time
 import RPi.GPIO as GPIO
-from picamera2 import Picamera2 as picam2
+from picamera2 import Picamera2
 from pyzbar.pyzbar import decode
 import cv2
 import numpy as np
 import mariadb
+from threading import Thread
+import os
 
 
 # Setup GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-
-'''# Initialize the PiCamera2
-picam2 = Picamera2()
-video_config = picam2.create_video_configuration(main={"size": (640, 480)})
-picam2.configure(video_config)'''
 
 # Connect to MariaDB
 conn = mariadb.connect(
@@ -43,6 +40,11 @@ GPIO.add_event_detect(22, GPIO.BOTH, callback=switch_callback, bouncetime=300)
 
 def scan_qr(scan_time=20):
     """Scan QR code and return the drink type."""
+    # Initialize the PiCamera2
+    picam2 = Picamera2()
+    video_config = picam2.create_video_configuration(main={"size": (640, 480)})
+    picam2.configure(video_config)
+    
     scanning = True
     QrOk = False
     start_time = time.time()
@@ -73,6 +75,7 @@ def scan_qr(scan_time=20):
                 # Delete the row from the database so the QR code can't be reused
                 cur.execute("DELETE FROM TemporaryQR WHERE key_id=?", (qr_data,))
                 conn.commit()
+                os.remove(f"static/qrcodes/{qr_data}.png")
                 scanning = False
                 QrOk = True
                 break

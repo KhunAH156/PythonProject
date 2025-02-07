@@ -22,6 +22,11 @@ def get_db_connection():
 def index():
     return render_template("index.html")
 
+@app.route("/qrlist")
+def qrlist():
+    return render_template("qrlist.html")
+
+
 @app.route("/generate", methods=["POST"])
 def generate():
     key_id = os.urandom(8).hex()  # Generate random key ID
@@ -57,6 +62,18 @@ def generate():
     finally:
         cursor.close()
         connection.close()
+
+@app.route("/qrlist1")
+def qrlist1():
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("SELECT key_id FROM TemporaryQR")
+        result = cursor.fetchall()
+        qr_codes = [{"key_id": row[0]} for row in result]
+        return jsonify(qr_codes)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

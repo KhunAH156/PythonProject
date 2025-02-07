@@ -26,7 +26,7 @@ lcd.lcd_clear()
 bot = Bot(token=BOT_TOKEN)
 
 # Admin access variables
-ADMIN_PASSCODE = "1244"  # Replace with a secure passcode
+ADMIN_PASSCODE = "1234"  # Replace with a secure passcode
 admin_logged_in = False  # Flag to track admin access
 entered_passcode = ""    # Buffer to store passcode input
 
