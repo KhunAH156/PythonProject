@@ -18,6 +18,7 @@ from hal import hal_usonic as usonic
 from hal import hal_dc_motor as dc_motor
 from telegram import Bot
 from qrcode_scanner import scan_qr
+from videoCapture import record_and_send_video
 
 
 
@@ -211,12 +212,16 @@ def main():
                     time.sleep(2)
 
                     # ✅ If failed attempts reach 5, send alert and reset counter
-                    if failed_attempt >= 5:
+                    if failed_attempt >= 2:
                         lcd.lcd_clear()
                         lcd.lcd_display_string("Too Many Attempts!", 1)
                         send_telegram_message("WARNING: Too many failed login attempts!")
+
+                        print("⚠️ Too many failed attempts. Recording video...")
+                        record_and_send_video()  # ✅ Capture and send video
+
                         time.sleep(3)
-                        failed_attempt = 0  # ✅ Reset failed attempts
+                        failed_attempt = 0
 
 
             # QR Code Login Feature
