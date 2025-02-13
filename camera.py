@@ -91,7 +91,7 @@ def record_and_send_video():
     picam2 = Picamera2()
     video_config = picam2.create_video_configuration(main={"size": (640, 480)})
     picam2.configure(video_config)
-    encoder = H264Encoder(bitrate=10000000)
+    encoder = H264Encoder(bitrate=5000000)
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     output = os.path.join(VIDEO_FOLDER, f"video_{timestamp}.h264")
