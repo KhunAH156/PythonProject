@@ -40,6 +40,25 @@
         });
     </script>
 
+<div class="button-container">
+    <button id="ledOnButton">Turn LED On</button>
+    <button id="ledOffButton">Turn LED Off</button>
+</div>
+
+<script>
+    document.getElementById("ledOnButton").addEventListener("click", function () {
+        fetch("/led/on", { method: "POST" })
+            .then(response => response.json())
+            .then(data => alert(data.status));
+    });
+
+    document.getElementById("ledOffButton").addEventListener("click", function () {
+        fetch("/led/off", { method: "POST" })
+            .then(response => response.json())
+            .then(data => alert(data.status));
+    });
+</script>
+
 
     <script src="/static/js/script.js" defer></script>
 

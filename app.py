@@ -4,6 +4,7 @@ import qrcode
 import os
 import RPi.GPIO as GPIO
 from time import sleep
+from hal import hal_led as led
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"  # Change this to a strong secret key
@@ -140,6 +141,20 @@ def qrlist1():
         return jsonify(qr_codes)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/led/on', methods=['POST'])
+def led_on():
+    if "logged_in" not in session:
+        return jsonify({"error": "Unauthorized"}), 403
+    led.set_output(24, True)  # Turn LED on
+    return jsonify({'status': 'LED On'})
+
+@app.route('/led/off', methods=['POST'])
+def led_off():
+    if "logged_in" not in session:
+        return jsonify({"error": "Unauthorized"}), 403
+    led.set_output(24, False)  # Turn LED off
+    return jsonify({'status': 'LED Off'})
 
 if __name__ == "__main__":
     try:
