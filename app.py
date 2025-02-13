@@ -17,6 +17,10 @@ GPIO.setup(26, GPIO.OUT)
 servo = GPIO.PWM(26, 50)  # 50Hz PWM
 servo.start(0)
 
+# Store last known sensor values
+last_temperature = None
+last_humidity = None
+
 def set_servo_position(position):
     duty_cycle = (-10 * position) / 180 + 12
     print(f"Setting servo to position {position} (duty cycle: {duty_cycle})")
@@ -159,15 +163,22 @@ def led_off():
 
 @app.route('/sensor', methods=['GET'])
 def get_sensor_data():
+    global last_temperature, last_humidity  # Use stored values
+
     if "logged_in" not in session:
         return jsonify({"error": "Unauthorized"}), 403
-    
-    temp, humidity = ths.read_temp_humidity()
-    
-    if temp == -100 or humidity == -100:
-        return jsonify({"error": "Failed to read sensor data"}), 500
 
-    return jsonify({"temperature": temp, "humidity": humidity})
+    temp, humidity = ths.read_temp_humidity()
+
+    if temp != -100 and humidity != -100:
+        last_temperature = temp
+        last_humidity = humidity
+
+    # Return the last valid values if current reading fails
+    return jsonify({
+        "temperature": last_temperature if last_temperature is not None else "No Data",
+        "humidity": last_humidity if last_humidity is not None else "No Data"
+    })
 
 if __name__ == "__main__":
     try:
