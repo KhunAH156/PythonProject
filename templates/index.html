@@ -19,7 +19,27 @@
 
     <div class="button-container">
         <a href="qrlist" class="qr-list-button">Go to QR List</a>
+    </div><br>
+
+    <div class="button-container">
+        <button id="unlockButton">Unlock</button>
+        <button id="lockButton">Lock</button>
     </div>
+
+    <script>
+        document.getElementById("unlockButton").addEventListener("click", function () {
+            fetch("/unlock", { method: "POST" })
+                .then(response => response.json())
+                .then(data => alert(data.status));
+        });
+
+        document.getElementById("lockButton").addEventListener("click", function () {
+            fetch("/lock", { method: "POST" })
+                .then(response => response.json())
+                .then(data => alert(data.status));
+        });
+    </script>
+
 
     <script src="/static/js/script.js" defer></script>
 

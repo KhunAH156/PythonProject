@@ -2,8 +2,23 @@ from flask import Flask, request, jsonify, render_template
 import mariadb
 import qrcode
 import os
+import RPi.GPIO as GPIO
+from time import sleep
 
 app = Flask(__name__)
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup(26, GPIO.OUT)
+servo = GPIO.PWM(26, 50)  # 50Hz PWM
+servo.start(0)
+
+def set_servo_position(position):
+    duty_cycle = (-10 * position) / 180 + 12
+    print(f"Setting servo to position {position} (duty cycle: {duty_cycle})")
+    servo.ChangeDutyCycle(duty_cycle)
+    sleep(0.5)
+    servo.ChangeDutyCycle(0)  # Stop sending signal to avoid jitter
 
 def get_db_connection():
     try:
@@ -26,6 +41,15 @@ def index():
 def qrlist():
     return render_template("qrlist.html")
 
+@app.route('/unlock', methods=['POST'])
+def unlock():
+    set_servo_position(0)  # Adjust according to servo's angle
+    return jsonify({'status': 'Unlocked'})
+
+@app.route('/lock', methods=['POST'])
+def lock():
+    set_servo_position(180)  # Adjust according to servo's angle
+    return jsonify({'status': 'Locked'})
 
 @app.route("/generate", methods=["POST"])
 def generate():
@@ -76,4 +100,8 @@ def qrlist1():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    try:
+        app.run(host='0.0.0.0', port=5000, debug=True)
+    finally:
+        servo.stop()
+        GPIO.cleanup()

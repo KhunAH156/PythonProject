@@ -1,7 +1,8 @@
 import time
 from threading import Thread
 import queue
-import app  # Import the Flask app module
+import app
+import camera  # Import the Flask app module
 
 from hal import hal_led as led
 from hal import hal_lcd as LCD
@@ -17,9 +18,6 @@ from hal import hal_temp_humidity_sensor as temp_humid_sensor
 from hal import hal_usonic as usonic
 from hal import hal_dc_motor as dc_motor
 from telegram import Bot
-from qrcode_scanner import scan_qr
-from videoCapture import record_and_send_video
-
 
 
 BOT_TOKEN = "7723998968:AAFc4QK-qRaIxCfqeqLYRs1OLuF-2z_OOiM"
@@ -87,7 +85,7 @@ def enter_passcode():
 
         if key in range(10):  # If key is 0-9
             entered_code += str(key)
-            masked_display = "*" * len(entered_code)  # Mask input
+            masked_display = "*" * len(entered_code)  #Mask input
             lcd.lcd_display_string(masked_display, 2)
         
         elif key == "#":  # Enter key (optional)
@@ -197,14 +195,14 @@ def main():
                 passcode = enter_passcode()
 
                 if passcode == CORRECT_PASSCODE:
-                    failed_attempt = 0  # ✅ Reset failed attempts on success
+                    failed_attempt = 0  #Reset failed attempts on success
                     lcd.lcd_clear()
                     lcd.lcd_display_string("Access Granted", 1)
                     time.sleep(2)
                     send_telegram_message("Access Granted")
                     unlocking_process()
                 else:
-                    failed_attempt += 1  # ✅ Increment failed attempts
+                    failed_attempt += 1  #Increment failed attempts
                     lcd.lcd_clear()
                     lcd.lcd_display_string("Access Denied", 1)
                     send_telegram_message("Access Denied")
@@ -218,7 +216,7 @@ def main():
                         send_telegram_message("WARNING: Too many failed login attempts!")
 
                         print("⚠️ Too many failed attempts. Recording video...")
-                        record_and_send_video()  # ✅ Capture and send video
+                        camera.record_and_send_video()
 
                         time.sleep(3)
                         failed_attempt = 0
@@ -230,7 +228,7 @@ def main():
                 lcd.lcd_display_string("Scanning QR Code", 1)
                 time.sleep(2)
 
-                key_validation = scan_qr()
+                key_validation = camera.scan_qr()
 
                 if key_validation:
                     lcd.lcd_clear()
