@@ -45,6 +45,27 @@
     <button id="ledOffButton">Turn LED Off</button>
 </div>
 
+<div class="sensor-container">
+    <h2>Temperature & Humidity</h2>
+    <p>Temperature: <span id="temperature">--</span> °C</p>
+    <p>Humidity: <span id="humidity">--</span> %</p>
+</div>
+
+<div class="button-container">
+    <button id="logoutButton">Logout</button>
+</div>
+
+<script>
+    document.getElementById("logoutButton").addEventListener("click", function () {
+        fetch("/logout", { method: "GET" })
+            .then(() => {
+                alert("Logged out successfully!");
+                window.location.href = "/login"; // Redirect to login page
+            });
+    });
+</script>
+
+
 <script>
     document.getElementById("ledOnButton").addEventListener("click", function () {
         fetch("/led/on", { method: "POST" })
@@ -61,6 +82,29 @@
 
 
     <script src="/static/js/script.js" defer></script>
+
+    <script>
+        function updateSensorData() {
+            fetch("/sensor")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById("temperature").innerText = "Error";
+                        document.getElementById("humidity").innerText = "Error";
+                    } else {
+                        document.getElementById("temperature").innerText = data.temperature;
+                        document.getElementById("humidity").innerText = data.humidity;
+                    }
+                })
+                .catch(error => console.error("Error fetching sensor data:", error));
+        }
+    
+        // Update sensor data every 5 seconds
+        setInterval(updateSensorData, 5000);
+    
+        // Load data immediately on page load
+        updateSensorData();
+    </script>
 
 </body>
 

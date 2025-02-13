@@ -5,6 +5,7 @@ import os
 import RPi.GPIO as GPIO
 from time import sleep
 from hal import hal_led as led
+from hal import hal_temp_humidity_sensor as ths
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"  # Change this to a strong secret key
@@ -155,6 +156,18 @@ def led_off():
         return jsonify({"error": "Unauthorized"}), 403
     led.set_output(24, False)  # Turn LED off
     return jsonify({'status': 'LED Off'})
+
+@app.route('/sensor', methods=['GET'])
+def get_sensor_data():
+    if "logged_in" not in session:
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    temp, humidity = ths.read_temp_humidity()
+    
+    if temp == -100 or humidity == -100:
+        return jsonify({"error": "Failed to read sensor data"}), 500
+
+    return jsonify({"temperature": temp, "humidity": humidity})
 
 if __name__ == "__main__":
     try:
