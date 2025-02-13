@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 import mariadb
 import qrcode
 import os
@@ -6,7 +6,9 @@ import RPi.GPIO as GPIO
 from time import sleep
 
 app = Flask(__name__)
+app.secret_key = "your_secret_key"  # Change this to a strong secret key
 
+# GPIO Setup
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 GPIO.setup(26, GPIO.OUT)
@@ -34,25 +36,62 @@ def get_db_connection():
         return None
 
 @app.route("/")
+def home():
+    if "logged_in" in session:
+        return redirect(url_for("index"))
+    return redirect(url_for("login"))
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        # Predefined login credentials (You can replace this with a database check)
+        if username == "admin" and password == "password123":
+            session["logged_in"] = True
+            return redirect(url_for("index"))
+        else:
+            return render_template("login.html", error="Invalid username or password")
+
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.pop("logged_in", None)
+    return redirect(url_for("login"))
+
+@app.route("/index")
 def index():
+    if "logged_in" not in session:
+        return redirect(url_for("login"))
     return render_template("index.html")
 
 @app.route("/qrlist")
 def qrlist():
+    if "logged_in" not in session:
+        return redirect(url_for("login"))
     return render_template("qrlist.html")
 
 @app.route('/unlock', methods=['POST'])
 def unlock():
-    set_servo_position(0)  # Adjust according to servo's angle
+    if "logged_in" not in session:
+        return jsonify({"error": "Unauthorized"}), 403
+    set_servo_position(0)
     return jsonify({'status': 'Unlocked'})
 
 @app.route('/lock', methods=['POST'])
 def lock():
-    set_servo_position(180)  # Adjust according to servo's angle
+    if "logged_in" not in session:
+        return jsonify({"error": "Unauthorized"}), 403
+    set_servo_position(180)
     return jsonify({'status': 'Locked'})
 
 @app.route("/generate", methods=["POST"])
 def generate():
+    if "logged_in" not in session:
+        return jsonify({"error": "Unauthorized"}), 403
+
     key_id = os.urandom(8).hex()  # Generate random key ID
 
     connection = get_db_connection()
@@ -68,7 +107,7 @@ def generate():
         # Generate QR Code
         qr = qrcode.make(key_id)
         qr_path = f"static/qrcodes/{key_id}.png"
-        qr_url_path = f"/static/qrcodes/{key_id}.png"  # Correct URL path for client access
+        qr_url_path = f"/static/qrcodes/{key_id}.png"
         os.makedirs(os.path.dirname(qr_path), exist_ok=True)
         qr.save(qr_path)
         print(f"QR Code saved at: {qr_path}")
@@ -89,6 +128,9 @@ def generate():
 
 @app.route("/qrlist1")
 def qrlist1():
+    if "logged_in" not in session:
+        return jsonify({"error": "Unauthorized"}), 403
+
     try:
         connection = get_db_connection()
         cursor = connection.cursor()
