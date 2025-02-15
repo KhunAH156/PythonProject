@@ -6,27 +6,15 @@ import RPi.GPIO as GPIO
 from time import sleep
 from hal import hal_led as led
 from hal import hal_temp_humidity_sensor as ths
+from hal import hal_servo as servo
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"  # Change this to a strong secret key
-
-# GPIO Setup
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
-GPIO.setup(26, GPIO.OUT)
-servo = GPIO.PWM(26, 50)  # 50Hz PWM
-servo.start(0)
 
 # Store last known sensor values
 last_temperature = None
 last_humidity = None
 
-def set_servo_position(position):
-    duty_cycle = (-10 * position) / 180 + 12
-    print(f"Setting servo to position {position} (duty cycle: {duty_cycle})")
-    servo.ChangeDutyCycle(duty_cycle)
-    sleep(0.5)
-    servo.ChangeDutyCycle(0)  # Stop sending signal to avoid jitter
 
 def get_db_connection():
     try:
@@ -83,14 +71,14 @@ def qrlist():
 def unlock():
     if "logged_in" not in session:
         return jsonify({"error": "Unauthorized"}), 403
-    set_servo_position(0)
+    servo.set_servo_position(90)
     return jsonify({'status': 'Unlocked'})
 
 @app.route('/lock', methods=['POST'])
 def lock():
     if "logged_in" not in session:
         return jsonify({"error": "Unauthorized"}), 403
-    set_servo_position(180)
+    servo.set_servo_position(0)
     return jsonify({'status': 'Locked'})
 
 @app.route("/generate", methods=["POST"])

@@ -19,7 +19,6 @@ from hal import hal_usonic as usonic
 from hal import hal_dc_motor as dc_motor
 from telegram import Bot
 
-
 BOT_TOKEN = "7723998968:AAFc4QK-qRaIxCfqeqLYRs1OLuF-2z_OOiM"
 CHAT_ID = "5819192033"
 
@@ -94,17 +93,16 @@ def enter_passcode():
     return entered_code
 
 def handle_rfid_authorization(reader):
-    """Handle payment authorization using an RFID card."""
+    """Handle authorization using an RFID card."""
     lcd = LCD.lcd()
-    lcd.lcd_clear()
-    lcd.lcd_display_string("Tap your card", 1)
+    lcd.lcd_display_string("Tap Card", 1)
 
     while True:
         rfid_id = reader.read_id_no_block()
         if rfid_id:
             lcd.lcd_clear()
             if rfid_id == AUTHORIZED_RFID_TAG:
-                lcd.lcd_display_string("Payment Accepted", 1)
+                lcd.lcd_display_string("Card Accepted", 1)
                 time.sleep(2)
                 return True
             else:
@@ -112,6 +110,7 @@ def handle_rfid_authorization(reader):
                 buzzer.beep(0.5, 0.5, 2)
                 time.sleep(2)
                 lcd.lcd_clear()
+
 
 def unlocking_process():
     """Handle the door unlocking."""
@@ -242,6 +241,21 @@ def main():
                     buzzer.beep(0.5, 0.5, 2)
                     time.sleep(2)
 
+            elif key == 3:
+                start_time = time.time()  # Start the 15-second session
+                cardOk = False
+
+                while time.time() - start_time < 15:  # Allow 15 seconds for tapping
+                    cardOk = handle_rfid_authorization(reader)
+                    if cardOk:
+                        unlocking_process()
+                        break  # Exit the loop if a valid card is detected
+
+                if not cardOk:  # If time runs out without a valid card
+                    lcd.lcd_clear()
+                    lcd.lcd_display_string("Error: Timeout", 1)
+
+            
             else:
                 lcd.lcd_clear()
                 lcd.lcd_display_string("Invalid Option", 1)

@@ -11,7 +11,7 @@
 <body>
     <h1>Smart Door Lock - Login</h1>
     {% if error %}
-    <p style="color: red;">{{ error }}</p>
+    <p style="color:red;">{{ error }}</p>
     {% endif %}
     <form method="POST" action="{{ url_for('login') }}">
         <label for="username">Username:</label>
