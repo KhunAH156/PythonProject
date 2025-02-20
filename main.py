@@ -18,6 +18,7 @@ from hal import hal_temp_humidity_sensor as temp_humid_sensor
 from hal import hal_usonic as usonic
 from hal import hal_dc_motor as dc_motor
 from telegram import Bot
+import db_setup as db
 
 BOT_TOKEN = "7723998968:AAFc4QK-qRaIxCfqeqLYRs1OLuF-2z_OOiM"
 CHAT_ID = "5819192033"
@@ -148,6 +149,9 @@ def unlocking_process():
             break
 
 def main():
+    #Inintialize the database
+    db.setup_database()
+    
     # Initialization of HAL modules
     led.init()
     adc.init()
